@@ -537,12 +537,6 @@ PX4FMU::init()
 	// Getting initial parameter values
 	update_params();
 
-	for (unsigned i = 0; i < _max_actuators; i++) {
-		char pname[16];
-		sprintf(pname, "PWM_AUX_TRIM%d", i + 1);
-		param_find(pname);
-	}
-
 	return 0;
 }
 
@@ -928,13 +922,23 @@ PX4FMU::update_pwm_rev_mask()
 
 	for (unsigned i = 0; i < _max_actuators; i++) {
 		char pname[16];
-		int32_t ival;
+
+		if (_class_instance == CLASS_DEVICE_PRIMARY) {
+			sprintf(pname, "PWM_MAIN_REV%d", i + 1);
+
+		} else if (_class_instance == CLASS_DEVICE_SECONDARY) {
+			sprintf(pname, "PWM_AUX_REV%d", i + 1);
+
+		} else {
+			PX4_ERR("PWM REV only for MAIN and AUX");
+			return;
+		}
 
 		/* fill the channel reverse mask from parameters */
-		sprintf(pname, "PWM_AUX_REV%d", i + 1);
 		param_t param_h = param_find(pname);
 
 		if (param_h != PARAM_INVALID) {
+			int32_t ival = 0;
 			param_get(param_h, &ival);
 			_reverse_pwm_mask |= ((int16_t)(ival != 0)) << i;
 		}
@@ -952,13 +956,23 @@ PX4FMU::update_pwm_trims()
 
 		for (unsigned i = 0; i < _max_actuators; i++) {
 			char pname[16];
-			float pval;
+
+			if (_class_instance == CLASS_DEVICE_PRIMARY) {
+				sprintf(pname, "PWM_MAIN_TRIM%d", i + 1);
+
+			} else if (_class_instance == CLASS_DEVICE_SECONDARY) {
+				sprintf(pname, "PWM_AUX_TRIM%d", i + 1);
+
+			} else {
+				PX4_ERR("PWM TRIM only for MAIN and AUX");
+				return;
+			}
 
 			/* fill the struct from parameters */
-			sprintf(pname, "PWM_AUX_TRIM%d", i + 1);
 			param_t param_h = param_find(pname);
 
 			if (param_h != PARAM_INVALID) {
+				float pval = 0.0f;
 				param_get(param_h, &pval);
 				values[i] = (int16_t)(10000 * pval);
 				PX4_DEBUG("%s: %d", pname, values[i]);
